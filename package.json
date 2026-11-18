@@ -4,8 +4,10 @@
   "private": true,
   "packageManager": "pnpm@10.30.2",
   "scripts": {
-    "dev": "pnpm --filter server dev",
-    "build": "pnpm --filter server build",
+    "dev": "pnpm --parallel --filter server --filter client dev",
+    "dev:server": "pnpm --filter server dev",
+    "dev:client": "pnpm --filter client dev",
+    "build": "pnpm -r build",
     "start": "pnpm --filter server start"
   }
 }
