@@ -7,7 +7,8 @@
     "dev": "pnpm --parallel --filter server --filter client dev",
     "dev:server": "pnpm --filter server dev",
     "dev:client": "pnpm --filter client dev",
-    "build": "pnpm -r build",
+    "api:generate": "pnpm --filter contract generate && pnpm --filter client generate:sdk",
+    "build": "pnpm api:generate && pnpm --filter client build && pnpm --filter server build",
     "start": "pnpm --filter server start"
   }
 }
