@@ -9,6 +9,7 @@
     "dev:client": "pnpm --filter client dev",
     "api:generate": "pnpm --filter contract generate && pnpm --filter client generate:sdk",
     "build": "pnpm api:generate && pnpm --filter client build && pnpm --filter server build",
-    "start": "pnpm --filter server start"
+    "start": "pnpm --filter server start",
+    "test": "pnpm --filter server test"
   }
 }
