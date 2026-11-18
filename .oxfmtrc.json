@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "semi": false,
+  "trailingComma": "all",
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "client/src/api/generated/**",
+    "contract/generated/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "pnpm-lock.yaml",
+    ".idea/**",
+    ".github/**"
+  ]
+}

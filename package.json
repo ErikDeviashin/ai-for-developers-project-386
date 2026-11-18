@@ -10,6 +10,14 @@
     "api:generate": "pnpm --filter contract generate && pnpm --filter client generate:sdk",
     "build": "pnpm api:generate && pnpm --filter client build && pnpm --filter server build",
     "start": "pnpm --filter server start",
-    "test": "pnpm --filter server test"
+    "test": "pnpm --filter server test",
+    "lint": "oxlint --deny-warnings .",
+    "lint:fix": "oxlint --fix --deny-warnings .",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
+  "devDependencies": {
+    "oxfmt": "0.79.0",
+    "oxlint": "1.94.0"
   }
 }
