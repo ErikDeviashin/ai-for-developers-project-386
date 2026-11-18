@@ -38,7 +38,7 @@
 - TypeSpec → OpenAPI → `@hey-api/openapi-ts`.
 - SQLite и Drizzle ORM.
 - Vitest и Playwright.
-- pnpm и Node.js 22.
+- pnpm и Node.js 24.
 
 ## Установка
 

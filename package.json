@@ -1,0 +1,11 @@
+{
+  "name": "ai-for-developers-project-386",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.30.2",
+  "scripts": {
+    "dev": "pnpm --filter server dev",
+    "build": "pnpm --filter server build",
+    "start": "pnpm --filter server start"
+  }
+}
