@@ -27,3 +27,17 @@
 - Keep TypeScript on version 6: `@hey-api/openapi-ts@0.99.0` is incompatible with TypeScript 7.
 - Do not modify `.github/workflows/hexlet-check.yml` or `.github/workflows/README.md`.
 - Commit messages follow Conventional Commits.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the five default labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
