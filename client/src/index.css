@@ -1,29 +1,11 @@
-:root {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  line-height: 1.5;
-  color: #1f2933;
-  background-color: #f5f7fa;
-}
+@import 'tailwindcss';
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  :root {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
 
-body {
-  margin: 0;
-}
-
-main {
-  max-width: 48rem;
-  margin: 4rem auto;
-  padding: 0 1.5rem;
-}
-
-h1 {
-  margin: 0 0 1rem;
-  font-size: 2rem;
-}
-
-p {
-  margin: 0;
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
 }

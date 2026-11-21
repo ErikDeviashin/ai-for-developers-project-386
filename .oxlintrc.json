@@ -4,5 +4,11 @@
   "categories": {
     "correctness": "error"
   },
-  "ignorePatterns": ["client/src/api/generated/**", "contract/generated/**"]
+  "ignorePatterns": [
+    "client/src/api/generated/**",
+    "contract/generated/**",
+    "**/test-results/**",
+    "**/playwright-report/**",
+    "**/blob-report/**"
+  ]
 }
