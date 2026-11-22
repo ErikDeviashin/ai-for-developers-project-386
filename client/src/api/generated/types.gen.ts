@@ -168,6 +168,31 @@ export type GetMeetingTypeAvailabilityResponses = {
 
 export type GetMeetingTypeAvailabilityResponse = GetMeetingTypeAvailabilityResponses[keyof GetMeetingTypeAvailabilityResponses];
 
+export type ListOwnerMeetingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/meetings';
+};
+
+export type ListOwnerMeetingsErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: ErrorResponse;
+};
+
+export type ListOwnerMeetingsError = ListOwnerMeetingsErrors[keyof ListOwnerMeetingsErrors];
+
+export type ListOwnerMeetingsResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: Array<Meeting>;
+};
+
+export type ListOwnerMeetingsResponse = ListOwnerMeetingsResponses[keyof ListOwnerMeetingsResponses];
+
 export type CreateMeetingData = {
     body: CreateMeetingRequest;
     path?: never;

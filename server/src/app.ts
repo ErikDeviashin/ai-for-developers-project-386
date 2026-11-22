@@ -2,7 +2,7 @@ import Fastify, { type FastifyError, type FastifyInstance } from 'fastify'
 import type { DatabaseSync } from 'node:sqlite'
 import { getMeetingTypeAvailability } from './availability.js'
 import { createMeetingType, findMeetingType, listMeetingTypes } from './meeting-types.js'
-import { createMeeting } from './meetings.js'
+import { createMeeting, listOwnerMeetings } from './meetings.js'
 import {
   parseCreateMeetingBody,
   parseCreateMeetingTypeBody,
@@ -100,6 +100,16 @@ export function buildApp({
 
     reply.code(201)
     return createMeetingType(db, parsed.value)
+  })
+
+  app.get('/meetings', async (request, reply) => {
+    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    if (queryError) {
+      reply.code(400)
+      return queryError
+    }
+
+    return listOwnerMeetings(db, app.now())
   })
 
   app.post('/meetings', async (request, reply) => {

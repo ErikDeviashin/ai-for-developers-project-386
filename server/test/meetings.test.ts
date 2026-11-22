@@ -590,6 +590,156 @@ describe('POST /meetings conflicts', () => {
   })
 })
 
+describe('GET /meetings owner list', () => {
+  async function listMeetingsAt(now: string): Promise<MeetingResponse[]> {
+    const reader = buildApp({ db, now: () => new Date(now) })
+
+    try {
+      const response = await reader.inject({ method: 'GET', url: '/meetings' })
+
+      expect(response.statusCode).toBe(200)
+      return response.json() as MeetingResponse[]
+    } finally {
+      await reader.close()
+    }
+  }
+
+  async function book(
+    meetingTypeId: number,
+    start: string,
+    guestName: string,
+    guestAdditionalInfo?: string,
+  ) {
+    const response = await postMeeting({
+      meetingTypeId,
+      start,
+      guestName,
+      guestEmail: `${guestName.toLowerCase()}@example.com`,
+      ...(guestAdditionalInfo === undefined ? {} : { guestAdditionalInfo }),
+    })
+
+    expect(response.statusCode).toBe(201)
+    return response.json() as MeetingResponse
+  }
+
+  it('returns an empty list when there are no meetings', async () => {
+    const response = await app.inject({ method: 'GET', url: '/meetings' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual([])
+  })
+
+  it('returns upcoming meetings sorted by start ascending regardless of creation order', async () => {
+    const meetingType = await createMeetingType(30)
+
+    await book(meetingType.id, '2026-11-24T12:00:00+04:00', 'Борис')
+    await book(meetingType.id, '2026-11-23T12:00:00+04:00', 'Вера')
+    await book(meetingType.id, '2026-11-23T10:00:00+04:00', 'Анна')
+
+    const meetings = await listMeetingsAt(NOW)
+
+    expect(meetings.map((meeting) => meeting.start)).toEqual([
+      '2026-11-23T10:00:00+04:00',
+      '2026-11-23T12:00:00+04:00',
+      '2026-11-24T12:00:00+04:00',
+    ])
+    expect(meetings.map((meeting) => meeting.guestName)).toEqual(['Анна', 'Вера', 'Борис'])
+  })
+
+  it('keeps an ongoing meeting in the list and drops it once it has ended', async () => {
+    const meetingType = await createMeetingType(30)
+
+    await book(meetingType.id, '2026-11-23T10:00:00+04:00', 'Анна')
+    await book(meetingType.id, '2026-11-23T12:00:00+04:00', 'Борис')
+
+    const duringFirst = await listMeetingsAt('2026-11-23T10:10:00+04:00')
+    expect(duringFirst.map((meeting) => meeting.start)).toEqual([
+      '2026-11-23T10:00:00+04:00',
+      '2026-11-23T12:00:00+04:00',
+    ])
+
+    const atFirstEnd = await listMeetingsAt('2026-11-23T10:30:00+04:00')
+    expect(atFirstEnd.map((meeting) => meeting.start)).toEqual(['2026-11-23T12:00:00+04:00'])
+
+    const afterAll = await listMeetingsAt('2026-11-23T13:00:00+04:00')
+    expect(afterAll).toEqual([])
+  })
+
+  it('includes meetings of every meeting type', async () => {
+    const shortType = await createMeetingType(15, 'Короткий звонок')
+    const longType = await createMeetingType(120, 'Длинный звонок')
+
+    await book(shortType.id, '2026-11-23T10:00:00+04:00', 'Анна')
+    await book(longType.id, '2026-11-23T11:00:00+04:00', 'Борис')
+
+    const meetings = await listMeetingsAt(NOW)
+
+    expect(meetings.map((meeting) => meeting.meetingType.name)).toEqual([
+      'Короткий звонок',
+      'Длинный звонок',
+    ])
+  })
+
+  it('returns the same meeting shape as creation with the guest fields', async () => {
+    const meetingType = await createMeetingType(60, 'Консультация')
+
+    const created = await book(
+      meetingType.id,
+      '2026-11-23T15:00:00+04:00',
+      'Анна',
+      'Подготовьте документы',
+    )
+    const meetings = await listMeetingsAt(NOW)
+
+    expect(meetings).toEqual([created])
+    expect(meetings[0]).toMatchObject({
+      guestName: 'Анна',
+      guestEmail: 'анна@example.com',
+      guestAdditionalInfo: 'Подготовьте документы',
+      start: '2026-11-23T15:00:00+04:00',
+      end: '2026-11-23T16:00:00+04:00',
+      meetingType: { id: meetingType.id, name: 'Консультация', durationMinutes: 60 },
+    })
+    expect(Object.keys(meetings[0] ?? {}).sort()).toEqual([
+      'end',
+      'guestAdditionalInfo',
+      'guestEmail',
+      'guestName',
+      'id',
+      'meetingType',
+      'start',
+    ])
+  })
+
+  it('omits the additional info when the guest left it empty', async () => {
+    const meetingType = await createMeetingType(30)
+
+    await book(meetingType.id, '2026-11-23T10:00:00+04:00', 'Анна')
+
+    const meetings = await listMeetingsAt(NOW)
+
+    expect(meetings).toHaveLength(1)
+    expect(meetings[0]).not.toHaveProperty('guestAdditionalInfo')
+  })
+
+  it('rejects an unknown query parameter', async () => {
+    const response = await app.inject({ method: 'GET', url: '/meetings?from=2026-11-23' })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Проверьте заполнение полей',
+      details: [
+        {
+          field: 'from',
+          code: 'UNKNOWN_QUERY_PARAMETER',
+          message: expect.any(String),
+        },
+      ],
+    })
+  })
+})
+
 describe('POST /meetings concurrency', () => {
   it('creates exactly one meeting when two requests book the same slot concurrently', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'calendar-concurrency-'))

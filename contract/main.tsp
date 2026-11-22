@@ -127,6 +127,11 @@ op getMeetingTypeAvailability(
 ): MeetingTypeAvailability | BadRequestResponse | NotFoundResponse;
 
 @route("/meetings")
+@get
+@operationId("listOwnerMeetings")
+op listOwnerMeetings(): Meeting[] | BadRequestResponse;
+
+@route("/meetings")
 @post
 @operationId("createMeeting")
 op createMeeting(

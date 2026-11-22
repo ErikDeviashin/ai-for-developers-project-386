@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateMeetingData, CreateMeetingErrors, CreateMeetingResponses, CreateMeetingTypeData, CreateMeetingTypeErrors, CreateMeetingTypeResponses, GetHealthData, GetHealthResponses, GetMeetingTypeAvailabilityData, GetMeetingTypeAvailabilityErrors, GetMeetingTypeAvailabilityResponses, ListMeetingTypesData, ListMeetingTypesErrors, ListMeetingTypesResponses } from './types.gen';
+import type { CreateMeetingData, CreateMeetingErrors, CreateMeetingResponses, CreateMeetingTypeData, CreateMeetingTypeErrors, CreateMeetingTypeResponses, GetHealthData, GetHealthResponses, GetMeetingTypeAvailabilityData, GetMeetingTypeAvailabilityErrors, GetMeetingTypeAvailabilityResponses, ListMeetingTypesData, ListMeetingTypesErrors, ListMeetingTypesResponses, ListOwnerMeetingsData, ListOwnerMeetingsErrors, ListOwnerMeetingsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -32,6 +32,8 @@ export const createMeetingType = <ThrowOnError extends boolean = false>(options:
 });
 
 export const getMeetingTypeAvailability = <ThrowOnError extends boolean = false>(options: Options<GetMeetingTypeAvailabilityData, ThrowOnError>): RequestResult<GetMeetingTypeAvailabilityResponses, GetMeetingTypeAvailabilityErrors, ThrowOnError> => (options.client ?? client).get<GetMeetingTypeAvailabilityResponses, GetMeetingTypeAvailabilityErrors, ThrowOnError>({ url: '/meeting-types/{meetingTypeId}/availability', ...options });
+
+export const listOwnerMeetings = <ThrowOnError extends boolean = false>(options?: Options<ListOwnerMeetingsData, ThrowOnError>): RequestResult<ListOwnerMeetingsResponses, ListOwnerMeetingsErrors, ThrowOnError> => (options?.client ?? client).get<ListOwnerMeetingsResponses, ListOwnerMeetingsErrors, ThrowOnError>({ url: '/meetings', ...options });
 
 export const createMeeting = <ThrowOnError extends boolean = false>(options: Options<CreateMeetingData, ThrowOnError>): RequestResult<CreateMeetingResponses, CreateMeetingErrors, ThrowOnError> => (options.client ?? client).post<CreateMeetingResponses, CreateMeetingErrors, ThrowOnError>({
     url: '/meetings',
