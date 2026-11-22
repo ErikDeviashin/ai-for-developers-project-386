@@ -3,19 +3,25 @@ import { Link } from 'react-router-dom'
 import {
   createMeetingType,
   listMeetingTypes,
+  listOwnerMeetings,
   type CreateMeetingTypeRequest,
+  type Meeting,
   type MeetingType,
 } from '../api/generated'
 import { fieldErrorsFrom, toErrorResponse } from '../api/errors'
 import { PageContainer } from '../components/PageContainer'
 import { PageHeading } from '../components/PageHeading'
 import { formatDuration, sortMeetingTypes } from '../lib/meetingTypes'
+import { formatMeetingInterval, isMeetingOngoing } from '../lib/meetings'
 
 const DURATIONS = [15, 30, 60, 120]
 
 export function OwnerPage() {
   const [meetingTypes, setMeetingTypes] = useState<MeetingType[] | null>(null)
   const [listError, setListError] = useState<string | null>(null)
+  const [meetings, setMeetings] = useState<Meeting[] | null>(null)
+  const [meetingsError, setMeetingsError] = useState<string | null>(null)
+  const [meetingsLoadedAt, setMeetingsLoadedAt] = useState(0)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -39,6 +45,29 @@ export function OwnerPage() {
           setListError(
             toErrorResponse(error)?.message ??
               'Не удалось загрузить типы встреч. Обновите страницу.',
+          )
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    listOwnerMeetings({ throwOnError: true })
+      .then(({ data }) => {
+        if (active) {
+          setMeetings(data ?? [])
+          setMeetingsLoadedAt(Date.now())
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setMeetingsError(
+            toErrorResponse(error)?.message ?? 'Не удалось загрузить встречи. Обновите страницу.',
           )
         }
       })
@@ -87,6 +116,11 @@ export function OwnerPage() {
       setSubmitting(false)
     }
   }
+
+  const emptyMeetingsMessage =
+    meetingTypes !== null && meetingTypes.length === 0
+      ? 'Сначала создайте тип встречи'
+      : 'Нет предстоящих встреч'
 
   return (
     <PageContainer>
@@ -239,7 +273,39 @@ export function OwnerPage() {
         <h2 id="meetings-heading" className="text-2xl font-semibold">
           Встречи
         </h2>
-        <p className="mt-4 text-slate-600">Пока нет встреч</p>
+
+        <div className="mt-6">
+          {meetingsError ? (
+            <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">
+              {meetingsError}
+            </p>
+          ) : meetings === null ? (
+            <p className="text-slate-600">Загрузка встреч…</p>
+          ) : meetings.length === 0 ? (
+            <p className="text-slate-600">{emptyMeetingsMessage}</p>
+          ) : (
+            <ul aria-label="Список встреч" className="space-y-3">
+              {meetings.map((meeting) => (
+                <li key={meeting.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="text-lg font-medium">{meeting.meetingType.name}</h3>
+                    {isMeetingOngoing(meeting, meetingsLoadedAt) ? (
+                      <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">
+                        Сейчас
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-slate-700">{formatMeetingInterval(meeting)}</p>
+                  <p className="mt-2 font-medium">{meeting.guestName}</p>
+                  <p className="text-slate-600">{meeting.guestEmail}</p>
+                  {meeting.guestAdditionalInfo ? (
+                    <p className="mt-2 text-slate-700">{meeting.guestAdditionalInfo}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
     </PageContainer>
   )
