@@ -4,8 +4,33 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type CreateMeetingTypeRequest = {
+    name: string;
+    description?: string;
+    durationMinutes: number;
+};
+
+export type ErrorResponse = {
+    code: string;
+    message: string;
+    details?: Array<FieldError>;
+};
+
+export type FieldError = {
+    field: string;
+    code: string;
+    message: string;
+};
+
 export type HealthResponse = {
     status: 'ok';
+};
+
+export type MeetingType = {
+    id: number;
+    name: string;
+    description?: string;
+    durationMinutes: number;
 };
 
 export type GetHealthData = {
@@ -23,3 +48,53 @@ export type GetHealthResponses = {
 };
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
+
+export type ListMeetingTypesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/meeting-types';
+};
+
+export type ListMeetingTypesErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: ErrorResponse;
+};
+
+export type ListMeetingTypesError = ListMeetingTypesErrors[keyof ListMeetingTypesErrors];
+
+export type ListMeetingTypesResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: Array<MeetingType>;
+};
+
+export type ListMeetingTypesResponse = ListMeetingTypesResponses[keyof ListMeetingTypesResponses];
+
+export type CreateMeetingTypeData = {
+    body: CreateMeetingTypeRequest;
+    path?: never;
+    query?: never;
+    url: '/meeting-types';
+};
+
+export type CreateMeetingTypeErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: ErrorResponse;
+};
+
+export type CreateMeetingTypeError = CreateMeetingTypeErrors[keyof CreateMeetingTypeErrors];
+
+export type CreateMeetingTypeResponses = {
+    /**
+     * The request has succeeded and a new resource has been created as a result.
+     */
+    201: MeetingType;
+};
+
+export type CreateMeetingTypeResponse = CreateMeetingTypeResponses[keyof CreateMeetingTypeResponses];
