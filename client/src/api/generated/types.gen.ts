@@ -78,6 +78,15 @@ export type GetHealthData = {
     url: '/health';
 };
 
+export type GetHealthErrors = {
+    /**
+     * Server error
+     */
+    500: ErrorResponse;
+};
+
+export type GetHealthError = GetHealthErrors[keyof GetHealthErrors];
+
 export type GetHealthResponses = {
     /**
      * The request has succeeded.
@@ -99,6 +108,10 @@ export type ListMeetingTypesErrors = {
      * The server could not understand the request due to invalid syntax.
      */
     400: ErrorResponse;
+    /**
+     * Server error
+     */
+    500: ErrorResponse;
 };
 
 export type ListMeetingTypesError = ListMeetingTypesErrors[keyof ListMeetingTypesErrors];
@@ -124,6 +137,10 @@ export type CreateMeetingTypeErrors = {
      * The server could not understand the request due to invalid syntax.
      */
     400: ErrorResponse;
+    /**
+     * Server error
+     */
+    500: ErrorResponse;
 };
 
 export type CreateMeetingTypeError = CreateMeetingTypeErrors[keyof CreateMeetingTypeErrors];
@@ -155,6 +172,10 @@ export type GetMeetingTypeAvailabilityErrors = {
      * The server cannot find the requested resource.
      */
     404: ErrorResponse;
+    /**
+     * Server error
+     */
+    500: ErrorResponse;
 };
 
 export type GetMeetingTypeAvailabilityError = GetMeetingTypeAvailabilityErrors[keyof GetMeetingTypeAvailabilityErrors];
@@ -180,6 +201,10 @@ export type ListOwnerMeetingsErrors = {
      * The server could not understand the request due to invalid syntax.
      */
     400: ErrorResponse;
+    /**
+     * Server error
+     */
+    500: ErrorResponse;
 };
 
 export type ListOwnerMeetingsError = ListOwnerMeetingsErrors[keyof ListOwnerMeetingsErrors];
@@ -213,6 +238,10 @@ export type CreateMeetingErrors = {
      * The request conflicts with the current state of the server.
      */
     409: ErrorResponse;
+    /**
+     * Server error
+     */
+    500: ErrorResponse;
 };
 
 export type CreateMeetingError = CreateMeetingErrors[keyof CreateMeetingErrors];

@@ -41,6 +41,12 @@ model ConflictResponse {
   @body body: ErrorResponse;
 }
 
+@error
+model InternalServerErrorResponse {
+  @statusCode _: 500;
+  @body body: ErrorResponse;
+}
+
 model MeetingType {
   id: int32;
   name: string;
@@ -105,35 +111,44 @@ model MeetingCreated {
 @route("/health")
 @get
 @operationId("getHealth")
-op getHealth(): HealthResponse;
+op getHealth(): HealthResponse | InternalServerErrorResponse;
 
 @route("/meeting-types")
 @get
 @operationId("listMeetingTypes")
-op listMeetingTypes(): MeetingType[] | BadRequestResponse;
+op listMeetingTypes(): MeetingType[] | BadRequestResponse | InternalServerErrorResponse;
 
 @route("/meeting-types")
 @post
 @operationId("createMeetingType")
 op createMeetingType(
   @body body: CreateMeetingTypeRequest,
-): MeetingTypeCreated | BadRequestResponse;
+): MeetingTypeCreated | BadRequestResponse | InternalServerErrorResponse;
 
 @route("/meeting-types/{meetingTypeId}/availability")
 @get
 @operationId("getMeetingTypeAvailability")
 op getMeetingTypeAvailability(
   @path meetingTypeId: int32,
-): MeetingTypeAvailability | BadRequestResponse | NotFoundResponse;
+):
+  | MeetingTypeAvailability
+  | BadRequestResponse
+  | NotFoundResponse
+  | InternalServerErrorResponse;
 
 @route("/meetings")
 @get
 @operationId("listOwnerMeetings")
-op listOwnerMeetings(): Meeting[] | BadRequestResponse;
+op listOwnerMeetings(): Meeting[] | BadRequestResponse | InternalServerErrorResponse;
 
 @route("/meetings")
 @post
 @operationId("createMeeting")
 op createMeeting(
   @body body: CreateMeetingRequest,
-): MeetingCreated | BadRequestResponse | NotFoundResponse | ConflictResponse;
+):
+  | MeetingCreated
+  | BadRequestResponse
+  | NotFoundResponse
+  | ConflictResponse
+  | InternalServerErrorResponse;
