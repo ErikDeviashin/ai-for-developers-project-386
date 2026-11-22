@@ -27,6 +27,7 @@
 - Keep TypeScript on version 6: `@hey-api/openapi-ts@0.99.0` is incompatible with TypeScript 7.
 - Do not modify `.github/workflows/hexlet-check.yml` or `.github/workflows/README.md`.
 - Commit messages follow Conventional Commits.
+- Implementation commits must reference the issue they close, for example `feat: add meeting type publishing (#17)`.
 
 ## Agent skills
 
