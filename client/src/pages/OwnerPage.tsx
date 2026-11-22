@@ -38,7 +38,7 @@ export function OwnerPage() {
   useEffect(() => {
     let active = true
 
-    listMeetingTypes()
+    listMeetingTypes({ throwOnError: true })
       .then(({ data }) => {
         if (active) {
           setMeetingTypes(sortMeetingTypes(data ?? []))
@@ -72,7 +72,7 @@ export function OwnerPage() {
     }
 
     try {
-      const { data } = await createMeetingType({ body })
+      const { data } = await createMeetingType({ body, throwOnError: true })
 
       if (!data) {
         setFormError('Не удалось создать тип встречи. Попробуйте ещё раз.')
