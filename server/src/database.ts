@@ -16,6 +16,9 @@ const SCHEMA = `
     meeting_type_id INTEGER NOT NULL REFERENCES meeting_types(id),
     start_ms INTEGER NOT NULL,
     end_ms INTEGER NOT NULL,
+    guest_name TEXT NOT NULL,
+    guest_email TEXT NOT NULL,
+    guest_additional_info TEXT,
     CHECK (end_ms > start_ms)
   );
 
@@ -28,6 +31,7 @@ export function openDatabase(filename = ':memory:'): DatabaseSync {
   }
 
   const db = new DatabaseSync(filename)
+  db.exec('PRAGMA busy_timeout = 5000')
   db.exec(SCHEMA)
 
   return db

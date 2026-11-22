@@ -85,6 +85,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /meetings:
+    post:
+      operationId: createMeeting
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingRequest'
 components:
   schemas:
     AvailabilityDay:
@@ -100,6 +135,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Slot'
+    CreateMeetingRequest:
+      type: object
+      required:
+        - meetingTypeId
+        - start
+        - guestName
+        - guestEmail
+      properties:
+        meetingTypeId:
+          type: integer
+          format: int32
+        start:
+          type: string
+          format: date-time
+        guestName:
+          type: string
+        guestEmail:
+          type: string
+        guestAdditionalInfo:
+          type: string
     CreateMeetingTypeRequest:
       type: object
       required:
@@ -149,6 +204,33 @@ components:
           type: string
           enum:
             - ok
+    Meeting:
+      type: object
+      required:
+        - id
+        - meetingType
+        - start
+        - end
+        - guestName
+        - guestEmail
+      properties:
+        id:
+          type: integer
+          format: int32
+        meetingType:
+          $ref: '#/components/schemas/MeetingTypeSummary'
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        guestName:
+          type: string
+        guestEmail:
+          type: string
+        guestAdditionalInfo:
+          type: string
     MeetingType:
       type: object
       required:
@@ -175,6 +257,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AvailabilityDay'
+    MeetingTypeSummary:
+      type: object
+      required:
+        - id
+        - name
+        - durationMinutes
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        durationMinutes:
+          type: integer
+          format: int32
     Slot:
       type: object
       required:

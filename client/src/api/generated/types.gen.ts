@@ -9,6 +9,14 @@ export type AvailabilityDay = {
     slots: Array<Slot>;
 };
 
+export type CreateMeetingRequest = {
+    meetingTypeId: number;
+    start: string;
+    guestName: string;
+    guestEmail: string;
+    guestAdditionalInfo?: string;
+};
+
 export type CreateMeetingTypeRequest = {
     name: string;
     description?: string;
@@ -31,6 +39,16 @@ export type HealthResponse = {
     status: 'ok';
 };
 
+export type Meeting = {
+    id: number;
+    meetingType: MeetingTypeSummary;
+    start: string;
+    end: string;
+    guestName: string;
+    guestEmail: string;
+    guestAdditionalInfo?: string;
+};
+
 export type MeetingType = {
     id: number;
     name: string;
@@ -40,6 +58,12 @@ export type MeetingType = {
 
 export type MeetingTypeAvailability = {
     days: Array<AvailabilityDay>;
+};
+
+export type MeetingTypeSummary = {
+    id: number;
+    name: string;
+    durationMinutes: number;
 };
 
 export type Slot = {
@@ -143,3 +167,36 @@ export type GetMeetingTypeAvailabilityResponses = {
 };
 
 export type GetMeetingTypeAvailabilityResponse = GetMeetingTypeAvailabilityResponses[keyof GetMeetingTypeAvailabilityResponses];
+
+export type CreateMeetingData = {
+    body: CreateMeetingRequest;
+    path?: never;
+    query?: never;
+    url: '/meetings';
+};
+
+export type CreateMeetingErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: ErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the server.
+     */
+    409: ErrorResponse;
+};
+
+export type CreateMeetingError = CreateMeetingErrors[keyof CreateMeetingErrors];
+
+export type CreateMeetingResponses = {
+    /**
+     * The request has succeeded and a new resource has been created as a result.
+     */
+    201: Meeting;
+};
+
+export type CreateMeetingResponse = CreateMeetingResponses[keyof CreateMeetingResponses];
