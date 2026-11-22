@@ -22,6 +22,7 @@ const DURATIONS = [15, 30, 60, 120]
 const NAME_MAX_LENGTH = 80
 const DESCRIPTION_MAX_LENGTH = 500
 const BODY_FIELDS = new Set(['name', 'description', 'durationMinutes'])
+const INT32_MAX = 2_147_483_647
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -129,6 +130,33 @@ export function parseCreateMeetingTypeBody(body: unknown): ParseResult<NewMeetin
       ...(description === undefined ? {} : { description }),
       durationMinutes,
     },
+  }
+}
+
+export function parseMeetingTypeId(raw: string | undefined): ParseResult<number> {
+  if (raw === undefined || !/^\d+$/.test(raw)) {
+    return { ok: false, error: invalidMeetingTypeId() }
+  }
+
+  const id = Number(raw)
+  if (!Number.isInteger(id) || id <= 0 || id > INT32_MAX) {
+    return { ok: false, error: invalidMeetingTypeId() }
+  }
+
+  return { ok: true, value: id }
+}
+
+function invalidMeetingTypeId(): ErrorResponse {
+  return {
+    code: 'VALIDATION_ERROR',
+    message: 'Проверьте параметры запроса',
+    details: [
+      {
+        field: 'meetingTypeId',
+        code: 'INVALID_VALUE',
+        message: 'Идентификатор типа встречи должен быть положительным целым числом',
+      },
+    ],
   }
 }
 

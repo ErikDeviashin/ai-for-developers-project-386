@@ -1,7 +1,12 @@
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify'
 import type { DatabaseSync } from 'node:sqlite'
-import { createMeetingType, listMeetingTypes } from './meeting-types.js'
-import { parseCreateMeetingTypeBody, rejectQueryParameters } from './validation.js'
+import { getMeetingTypeAvailability } from './availability.js'
+import { createMeetingType, findMeetingType, listMeetingTypes } from './meeting-types.js'
+import {
+  parseCreateMeetingTypeBody,
+  parseMeetingTypeId,
+  rejectQueryParameters,
+} from './validation.js'
 
 type BuildAppOptions = {
   db: DatabaseSync
@@ -49,6 +54,32 @@ export function buildApp({
     }
 
     return listMeetingTypes(db)
+  })
+
+  app.get('/meeting-types/:meetingTypeId/availability', async (request, reply) => {
+    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    if (queryError) {
+      reply.code(400)
+      return queryError
+    }
+
+    const params = request.params as { meetingTypeId?: string }
+    const parsedId = parseMeetingTypeId(params.meetingTypeId)
+    if (!parsedId.ok) {
+      reply.code(400)
+      return parsedId.error
+    }
+
+    const meetingType = findMeetingType(db, parsedId.value)
+    if (meetingType === undefined) {
+      reply.code(404)
+      return {
+        code: 'MEETING_TYPE_NOT_FOUND',
+        message: 'Тип встречи не найден',
+      }
+    }
+
+    return getMeetingTypeAvailability(db, meetingType, app.now())
   })
 
   app.post('/meeting-types', async (request, reply) => {

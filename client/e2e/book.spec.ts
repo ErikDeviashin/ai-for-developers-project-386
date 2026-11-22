@@ -42,6 +42,25 @@ test('владелец публикует типы встреч, и гость �
   await guestTypes.nth(0).getByRole('button').click()
 
   await expect(page.getByRole('heading', { name: 'Выбор даты и времени' })).toBeVisible()
-  await expect(page.getByText(shortName)).toBeVisible()
-  await expect(page.getByText('Скоро здесь можно будет выбрать дату и время.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ноябрь 2026' })).toBeVisible()
+
+  const monday = page.getByRole('button', { name: 'Понедельник, 23 ноября 2026' })
+  await expect(monday).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Суббота, 28 ноября 2026' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Вторник, 1 декабря 2026' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Понедельник, 14 декабря 2026' })).toBeDisabled()
+  await expect(page.getByText('Пожалуйста, выберите свободную дату')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Далее' })).toBeDisabled()
+
+  await monday.click()
+
+  await expect(page.getByRole('heading', { name: /Понедельник, 23 ноября 2026/ })).toBeVisible()
+  await expect(page.getByText('Время по Тбилиси (UTC+4)').first()).toBeVisible()
+
+  await page.getByRole('button', { name: '10:00' }).click()
+  await expect(page.getByRole('button', { name: '10:00' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Далее' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Далее' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Данные гостя' })).toBeVisible()
 })

@@ -29,6 +29,12 @@ model BadRequestResponse {
   @body body: ErrorResponse;
 }
 
+@error
+model NotFoundResponse {
+  @statusCode _: 404;
+  @body body: ErrorResponse;
+}
+
 model MeetingType {
   id: int32;
   name: string;
@@ -47,6 +53,20 @@ model MeetingTypeCreated {
   @body body: MeetingType;
 }
 
+model Slot {
+  start: offsetDateTime;
+  end: offsetDateTime;
+}
+
+model AvailabilityDay {
+  date: plainDate;
+  slots: Slot[];
+}
+
+model MeetingTypeAvailability {
+  days: AvailabilityDay[];
+}
+
 @route("/health")
 @get
 @operationId("getHealth")
@@ -63,3 +83,10 @@ op listMeetingTypes(): MeetingType[] | BadRequestResponse;
 op createMeetingType(
   @body body: CreateMeetingTypeRequest,
 ): MeetingTypeCreated | BadRequestResponse;
+
+@route("/meeting-types/{meetingTypeId}/availability")
+@get
+@operationId("getMeetingTypeAvailability")
+op getMeetingTypeAvailability(
+  @path meetingTypeId: int32,
+): MeetingTypeAvailability | BadRequestResponse | NotFoundResponse;
