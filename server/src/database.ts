@@ -10,6 +10,16 @@ const SCHEMA = `
     duration_minutes INTEGER NOT NULL
       CHECK (duration_minutes IN (15, 30, 60, 120))
   );
+
+  CREATE TABLE IF NOT EXISTS meetings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meeting_type_id INTEGER NOT NULL REFERENCES meeting_types(id),
+    start_ms INTEGER NOT NULL,
+    end_ms INTEGER NOT NULL,
+    CHECK (end_ms > start_ms)
+  );
+
+  CREATE INDEX IF NOT EXISTS meetings_start_end ON meetings (start_ms, end_ms);
 `
 
 export function openDatabase(filename = ':memory:'): DatabaseSync {

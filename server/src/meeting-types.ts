@@ -42,6 +42,14 @@ export function listMeetingTypes(db: DatabaseSync): MeetingType[] {
     )
 }
 
+export function findMeetingType(db: DatabaseSync, id: number): MeetingType | undefined {
+  const row = db
+    .prepare('SELECT id, name, description, duration_minutes FROM meeting_types WHERE id = ?')
+    .get(id) as unknown as MeetingTypeRow | undefined
+
+  return row === undefined ? undefined : toMeetingType(row)
+}
+
 export function createMeetingType(db: DatabaseSync, meetingType: NewMeetingType): MeetingType {
   const result = db
     .prepare('INSERT INTO meeting_types (name, description, duration_minutes) VALUES (?, ?, ?)')

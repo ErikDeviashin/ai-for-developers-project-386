@@ -4,6 +4,11 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type AvailabilityDay = {
+    date: string;
+    slots: Array<Slot>;
+};
+
 export type CreateMeetingTypeRequest = {
     name: string;
     description?: string;
@@ -31,6 +36,15 @@ export type MeetingType = {
     name: string;
     description?: string;
     durationMinutes: number;
+};
+
+export type MeetingTypeAvailability = {
+    days: Array<AvailabilityDay>;
+};
+
+export type Slot = {
+    start: string;
+    end: string;
 };
 
 export type GetHealthData = {
@@ -98,3 +112,34 @@ export type CreateMeetingTypeResponses = {
 };
 
 export type CreateMeetingTypeResponse = CreateMeetingTypeResponses[keyof CreateMeetingTypeResponses];
+
+export type GetMeetingTypeAvailabilityData = {
+    body?: never;
+    path: {
+        meetingTypeId: number;
+    };
+    query?: never;
+    url: '/meeting-types/{meetingTypeId}/availability';
+};
+
+export type GetMeetingTypeAvailabilityErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: ErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: ErrorResponse;
+};
+
+export type GetMeetingTypeAvailabilityError = GetMeetingTypeAvailabilityErrors[keyof GetMeetingTypeAvailabilityErrors];
+
+export type GetMeetingTypeAvailabilityResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: MeetingTypeAvailability;
+};
+
+export type GetMeetingTypeAvailabilityResponse = GetMeetingTypeAvailabilityResponses[keyof GetMeetingTypeAvailabilityResponses];

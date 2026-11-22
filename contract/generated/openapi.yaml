@@ -56,8 +56,50 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateMeetingTypeRequest'
+  /meeting-types/{meetingTypeId}/availability:
+    get:
+      operationId: getMeetingTypeAvailability
+      parameters:
+        - name: meetingTypeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingTypeAvailability'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
+    AvailabilityDay:
+      type: object
+      required:
+        - date
+        - slots
+      properties:
+        date:
+          type: string
+          format: date
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/Slot'
     CreateMeetingTypeRequest:
       type: object
       required:
@@ -124,3 +166,24 @@ components:
         durationMinutes:
           type: integer
           format: int32
+    MeetingTypeAvailability:
+      type: object
+      required:
+        - days
+      properties:
+        days:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityDay'
+    Slot:
+      type: object
+      required:
+        - start
+        - end
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
