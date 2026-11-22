@@ -82,6 +82,7 @@ export function OwnerPage() {
       setName('')
       setDescription('')
       setDuration('')
+      setListError(null)
       setMeetingTypes((current) => sortMeetingTypes([...(current ?? []), data]))
       setSuccessMessage('Тип встречи создан')
     } catch (error: unknown) {
