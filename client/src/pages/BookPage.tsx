@@ -8,7 +8,7 @@ import {
   type MeetingType,
   type MeetingTypeAvailability,
 } from '../api/generated'
-import { fieldErrorsFrom, toErrorResponse } from '../api/errors'
+import { toErrorResponse } from '../api/errors'
 import { PageContainer } from '../components/PageContainer'
 import { PageHeading } from '../components/PageHeading'
 import {
@@ -18,9 +18,12 @@ import {
   formatMonthTitle,
   formatSlotTime,
 } from '../lib/calendar'
-import { formatDuration, sortMeetingTypes } from '../lib/meetingTypes'
+import { formatDuration } from '../lib/meetingTypes'
 
 type Step = 'type' | 'datetime' | 'guest'
+
+const GUEST_FIELDS = new Set(['guestName', 'guestEmail', 'guestAdditionalInfo'])
+const CREATE_MEETING_FALLBACK = 'Не удалось создать встречу. Попробуйте ещё раз.'
 
 type CalendarProps = {
   firstDate: string
@@ -110,6 +113,7 @@ export function BookPage() {
 
   const [availability, setAvailability] = useState<MeetingTypeAvailability | null>(null)
   const [availabilityError, setAvailabilityError] = useState<string | null>(null)
+  const [availabilityNotFound, setAvailabilityNotFound] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
@@ -121,8 +125,10 @@ export function BookPage() {
   const [guestEmail, setGuestEmail] = useState('')
   const [guestAdditionalInfo, setGuestAdditionalInfo] = useState('')
   const [guestFieldErrors, setGuestFieldErrors] = useState<Record<string, string>>({})
+  const [startError, setStartError] = useState<string | null>(null)
   const [guestError, setGuestError] = useState<string | null>(null)
   const [slotTaken, setSlotTaken] = useState(false)
+  const [typeNotFound, setTypeNotFound] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [createdMeeting, setCreatedMeeting] = useState<Meeting | null>(null)
@@ -133,7 +139,7 @@ export function BookPage() {
     listMeetingTypes({ throwOnError: true })
       .then(({ data }) => {
         if (active) {
-          setMeetingTypes(sortMeetingTypes(data ?? []))
+          setMeetingTypes(data ?? [])
         }
       })
       .catch((error: unknown) => {
@@ -167,9 +173,15 @@ export function BookPage() {
       })
       .catch((error: unknown) => {
         if (active) {
+          const response = toErrorResponse(error)
+
+          if (response?.code === 'MEETING_TYPE_NOT_FOUND') {
+            setAvailabilityNotFound(response.message)
+            return
+          }
+
           setAvailabilityError(
-            toErrorResponse(error)?.message ??
-              'Не удалось загрузить доступное время. Попробуйте ещё раз.',
+            response?.message ?? 'Не удалось загрузить доступное время. Попробуйте ещё раз.',
           )
         }
       })
@@ -184,9 +196,12 @@ export function BookPage() {
 
     setNotice(null)
     setCheckError(null)
+    setStartError(null)
     setSuccessMessage(null)
     setAvailability(null)
     setAvailabilityError(null)
+    setAvailabilityNotFound(null)
+    setTypeNotFound(false)
 
     if (!isSameType) {
       setSelectedDate(null)
@@ -201,6 +216,7 @@ export function BookPage() {
   function retryAvailability() {
     setAvailability(null)
     setAvailabilityError(null)
+    setAvailabilityNotFound(null)
     setReloadKey((current) => current + 1)
   }
 
@@ -209,6 +225,7 @@ export function BookPage() {
     setSelectedSlot(null)
     setNotice(null)
     setCheckError(null)
+    setStartError(null)
     setSuccessMessage(null)
   }
 
@@ -216,12 +233,18 @@ export function BookPage() {
     setSelectedSlot(slotStart)
     setNotice(null)
     setCheckError(null)
+    setStartError(null)
     setSuccessMessage(null)
   }
 
   function handleBackToTypes() {
     setNotice(null)
     setCheckError(null)
+    setStartError(null)
+    setGuestError(null)
+    setSlotTaken(false)
+    setTypeNotFound(false)
+    setAvailabilityNotFound(null)
     setSuccessMessage(null)
     setStep('type')
   }
@@ -234,6 +257,8 @@ export function BookPage() {
     setChecking(true)
     setNotice(null)
     setCheckError(null)
+    setStartError(null)
+    setAvailabilityNotFound(null)
 
     try {
       const { data } = await getMeetingTypeAvailability({
@@ -258,9 +283,15 @@ export function BookPage() {
 
       setStep('guest')
     } catch (error: unknown) {
-      setCheckError(
-        toErrorResponse(error)?.message ?? 'Не удалось проверить доступность. Попробуйте ещё раз.',
-      )
+      const response = toErrorResponse(error)
+
+      if (response?.code === 'MEETING_TYPE_NOT_FOUND') {
+        setAvailability(null)
+        setAvailabilityNotFound(response.message)
+        return
+      }
+
+      setCheckError(response?.message ?? 'Не удалось проверить доступность. Попробуйте ещё раз.')
     } finally {
       setChecking(false)
     }
@@ -273,8 +304,10 @@ export function BookPage() {
 
     setSubmitting(true)
     setGuestFieldErrors({})
+    setStartError(null)
     setGuestError(null)
     setSlotTaken(false)
+    setTypeNotFound(false)
 
     try {
       const { data } = await createMeeting({
@@ -291,7 +324,7 @@ export function BookPage() {
       })
 
       if (!data) {
-        setGuestError('Не удалось создать встречу. Попробуйте ещё раз.')
+        setGuestError(CREATE_MEETING_FALLBACK)
         return
       }
 
@@ -307,16 +340,32 @@ export function BookPage() {
       setReloadKey((current) => current + 1)
     } catch (error: unknown) {
       const response = toErrorResponse(error)
-      const fieldErrors = response?.details?.length ? fieldErrorsFrom(response) : {}
-      const hasFieldErrors = Object.keys(fieldErrors).length > 0
+      const details = response?.details ?? []
+      const fieldErrors: Record<string, string> = {}
+      let startMessage: string | undefined
+      let hasOtherFieldErrors = false
+
+      for (const detail of details) {
+        if (GUEST_FIELDS.has(detail.field)) {
+          fieldErrors[detail.field] = detail.message
+        } else if (detail.field === 'start') {
+          startMessage = detail.message
+        } else {
+          hasOtherFieldErrors = true
+        }
+      }
+
+      const isSlotTaken = response?.code === 'SLOT_TAKEN'
+      const isTypeNotFound = response?.code === 'MEETING_TYPE_NOT_FOUND'
+      const hasInlineErrors = Object.keys(fieldErrors).length > 0 || startMessage !== undefined
+      const showGeneralMessage =
+        isSlotTaken || isTypeNotFound || hasOtherFieldErrors || !hasInlineErrors
 
       setGuestFieldErrors(fieldErrors)
-      setSlotTaken(response?.code === 'SLOT_TAKEN')
-      setGuestError(
-        response?.code === 'SLOT_TAKEN' || !hasFieldErrors
-          ? (response?.message ?? 'Не удалось создать встречу. Попробуйте ещё раз.')
-          : null,
-      )
+      setStartError(startMessage ?? null)
+      setSlotTaken(isSlotTaken)
+      setTypeNotFound(isTypeNotFound)
+      setGuestError(showGeneralMessage ? (response?.message ?? CREATE_MEETING_FALLBACK) : null)
     } finally {
       setSubmitting(false)
     }
@@ -325,19 +374,23 @@ export function BookPage() {
   function chooseAnotherTime() {
     setStep('datetime')
     setSelectedSlot(null)
+    setStartError(null)
     setGuestError(null)
     setGuestFieldErrors({})
     setSlotTaken(false)
+    setTypeNotFound(false)
     setSuccessMessage(null)
     setAvailability(null)
     setAvailabilityError(null)
+    setAvailabilityNotFound(null)
     setReloadKey((current) => current + 1)
   }
 
   const daysByDate = new Map((availability?.days ?? []).map((day) => [day.date, day]))
   const selectedDay = selectedDate === null ? undefined : daysByDate.get(selectedDate)
   const hasAnySlot = (availability?.days ?? []).some((day) => day.slots.length > 0)
-  const availabilityLoading = availability === null && availabilityError === null
+  const availabilityLoading =
+    availability === null && availabilityError === null && availabilityNotFound === null
   const sessionMeetingDate =
     createdMeeting !== null &&
     selectedType !== null &&
@@ -421,7 +474,18 @@ export function BookPage() {
               <p className="mt-2 text-sm text-slate-600">Время по Тбилиси (UTC+4)</p>
             </div>
 
-            {availabilityError ? (
+            {availabilityNotFound ? (
+              <div role="alert" className="mt-6 rounded-lg bg-red-50 p-3 text-red-800">
+                <p>{availabilityNotFound}</p>
+                <button
+                  type="button"
+                  onClick={handleBackToTypes}
+                  className="mt-2 font-medium underline underline-offset-4"
+                >
+                  К выбору типа встречи
+                </button>
+              </div>
+            ) : availabilityError ? (
               <div role="alert" className="mt-6 rounded-lg bg-red-50 p-3 text-red-800">
                 <p>{availabilityError}</p>
                 <button
@@ -464,6 +528,12 @@ export function BookPage() {
                   {notice ? (
                     <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-3 text-amber-900">
                       {notice}
+                    </p>
+                  ) : null}
+
+                  {startError ? (
+                    <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-red-800">
+                      {startError}
                     </p>
                   ) : null}
 
@@ -563,6 +633,12 @@ export function BookPage() {
               </div>
             ) : null}
 
+            {startError ? (
+              <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-red-800">
+                {startError}
+              </p>
+            ) : null}
+
             <form
               noValidate
               aria-labelledby="guest-step-heading"
@@ -649,6 +725,15 @@ export function BookPage() {
                       className="mt-2 font-medium underline underline-offset-4"
                     >
                       Выбрать другое время
+                    </button>
+                  ) : null}
+                  {typeNotFound ? (
+                    <button
+                      type="button"
+                      onClick={handleBackToTypes}
+                      className="mt-2 font-medium underline underline-offset-4"
+                    >
+                      К выбору типа встречи
                     </button>
                   ) : null}
                 </div>

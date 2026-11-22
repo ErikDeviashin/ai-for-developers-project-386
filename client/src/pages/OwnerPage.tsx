@@ -37,7 +37,7 @@ export function OwnerPage() {
     listMeetingTypes({ throwOnError: true })
       .then(({ data }) => {
         if (active) {
-          setMeetingTypes(sortMeetingTypes(data ?? []))
+          setMeetingTypes(data ?? [])
         }
       })
       .catch((error: unknown) => {
@@ -118,9 +118,11 @@ export function OwnerPage() {
   }
 
   const emptyMeetingsMessage =
-    meetingTypes !== null && meetingTypes.length === 0
-      ? 'Сначала создайте тип встречи'
-      : 'Нет предстоящих встреч'
+    meetingTypes === null
+      ? null
+      : meetingTypes.length === 0
+        ? 'Сначала создайте тип встречи'
+        : 'Нет предстоящих встреч'
 
   return (
     <PageContainer>
@@ -282,7 +284,9 @@ export function OwnerPage() {
           ) : meetings === null ? (
             <p className="text-slate-600">Загрузка встреч…</p>
           ) : meetings.length === 0 ? (
-            <p className="text-slate-600">{emptyMeetingsMessage}</p>
+            emptyMeetingsMessage === null ? null : (
+              <p className="text-slate-600">{emptyMeetingsMessage}</p>
+            )
           ) : (
             <ul aria-label="Список встреч" className="space-y-3">
               {meetings.map((meeting) => (

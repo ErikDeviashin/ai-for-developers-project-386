@@ -43,6 +43,8 @@ test('гость бронирует слот, видит созданную вс
   await page.getByRole('button', { name: 'Понедельник, 23 ноября 2026' }).click()
   await expect(page.getByRole('button', { name: '15:00' })).toHaveCount(0)
 
+  // The «Сейчас» badge is derived from the browser clock, so pin it to the meeting
+  // time; server-side filtering by the injected clock is proven by API tests.
   await page.clock.setFixedTime('2026-11-23T15:10:00+04:00')
   await page.goto('/owner')
 
