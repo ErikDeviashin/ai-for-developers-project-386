@@ -5,6 +5,13 @@ import {
   tbilisiDate,
   tbilisiMidnightMs,
 } from './availability.js'
+import {
+  ALLOWED_DURATIONS,
+  MINUTES_IN_MS,
+  SLOT_STEP_MINUTES,
+  WORKDAY_END_MINUTES,
+  WORKDAY_START_MINUTES,
+} from './booking-rules.js'
 
 export type FieldError = {
   field: string
@@ -35,7 +42,6 @@ export type NewMeetingInput = {
 
 type ParseResult<T> = { ok: true; value: T } | { ok: false; error: ErrorResponse }
 
-const DURATIONS = [15, 30, 60, 120]
 const NAME_MAX_LENGTH = 80
 const DESCRIPTION_MAX_LENGTH = 500
 const BODY_FIELDS = new Set(['name', 'description', 'durationMinutes'])
@@ -54,10 +60,6 @@ const MEETING_BODY_FIELDS = new Set([
 ])
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const START_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\+04:00$/
-const MINUTES_IN_MS = 60_000
-const WORKDAY_START_MINUTES = 10 * 60
-const WORKDAY_END_MINUTES = 18 * 60
-const SLOT_STEP_MINUTES = 30
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -143,7 +145,7 @@ export function parseCreateMeetingTypeBody(body: unknown): ParseResult<NewMeetin
     })
   } else if (
     typeof body.durationMinutes !== 'number' ||
-    !DURATIONS.includes(body.durationMinutes)
+    !ALLOWED_DURATIONS.includes(body.durationMinutes)
   ) {
     details.push({
       field: 'durationMinutes',

@@ -1,11 +1,13 @@
 import type { DatabaseSync } from 'node:sqlite'
+import {
+  MINUTES_IN_MS,
+  SLOT_STEP_MINUTES,
+  TBILISI_OFFSET_MINUTES,
+  WORKDAY_END_MINUTES,
+  WORKDAY_START_MINUTES,
+} from './booking-rules.js'
 import type { MeetingType } from './meeting-types.js'
 
-const TBILISI_OFFSET_MINUTES = 4 * 60
-const MINUTES_IN_MS = 60_000
-const WORKDAY_START_MINUTES = 10 * 60
-const WORKDAY_END_MINUTES = 18 * 60
-const SLOT_STEP_MINUTES = 30
 const WINDOW_DAYS = 14
 
 export type Slot = {
@@ -34,6 +36,7 @@ type OccupiedInterval = {
 }
 
 export type BookingWindow = {
+  firstDate: CalendarDate
   firstMidnightMs: number
   endMidnightMs: number
 }
@@ -91,13 +94,10 @@ export function getBookingWindow(now: Date): BookingWindow {
   const firstDate = addDays(tbilisiDate(now), 1)
 
   return {
+    firstDate,
     firstMidnightMs: tbilisiMidnightMs(firstDate),
     endMidnightMs: tbilisiMidnightMs(addDays(firstDate, WINDOW_DAYS)),
   }
-}
-
-function formatSlot(date: CalendarDate, minutes: number): string {
-  return formatInstant(tbilisiMidnightMs(date) + minutes * MINUTES_IN_MS)
 }
 
 function lastStartMinutes(durationMinutes: number): number {
@@ -114,7 +114,6 @@ export function getMeetingTypeAvailability(
   meetingType: MeetingType,
   now: Date,
 ): MeetingTypeAvailability {
-  const firstDate = addDays(tbilisiDate(now), 1)
   const window = getBookingWindow(now)
   const occupied = db
     .prepare('SELECT start_ms, end_ms FROM meetings WHERE start_ms < ? AND end_ms > ?')
@@ -123,7 +122,7 @@ export function getMeetingTypeAvailability(
   const days: AvailabilityDay[] = []
 
   for (let offset = 0; offset < WINDOW_DAYS; offset += 1) {
-    const date = addDays(firstDate, offset)
+    const date = addDays(window.firstDate, offset)
     const slots: Slot[] = []
 
     if (!isWeekend(date)) {
@@ -139,8 +138,8 @@ export function getMeetingTypeAvailability(
 
         if (!isOccupied) {
           slots.push({
-            start: formatSlot(date, start),
-            end: formatSlot(date, start + meetingType.durationMinutes),
+            start: formatInstant(startMs),
+            end: formatInstant(endMs),
           })
         }
       }

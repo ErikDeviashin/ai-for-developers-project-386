@@ -1,4 +1,9 @@
-import Fastify, { type FastifyError, type FastifyInstance } from 'fastify'
+import Fastify, {
+  type FastifyError,
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+} from 'fastify'
 import type { DatabaseSync } from 'node:sqlite'
 import { getMeetingTypeAvailability } from './availability.js'
 import { createMeetingType, findMeetingType, listMeetingTypes } from './meeting-types.js'
@@ -9,12 +14,26 @@ import {
   parseMeetingTypeId,
   rejectQueryParameters,
   validateBookingStart,
+  type ErrorResponse,
 } from './validation.js'
 
 type BuildAppOptions = {
   db: DatabaseSync
   logger?: boolean
   now?: () => Date
+}
+
+function rejectUnknownQuery(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): ErrorResponse | undefined {
+  const error = rejectQueryParameters(request.query as Record<string, unknown>)
+
+  if (error !== undefined) {
+    reply.code(400)
+  }
+
+  return error
 }
 
 declare module 'fastify' {
@@ -50,9 +69,8 @@ export function buildApp({
   app.get('/health', async () => ({ status: 'ok' }))
 
   app.get('/meeting-types', async (request, reply) => {
-    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    const queryError = rejectUnknownQuery(request, reply)
     if (queryError) {
-      reply.code(400)
       return queryError
     }
 
@@ -60,9 +78,8 @@ export function buildApp({
   })
 
   app.get('/meeting-types/:meetingTypeId/availability', async (request, reply) => {
-    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    const queryError = rejectUnknownQuery(request, reply)
     if (queryError) {
-      reply.code(400)
       return queryError
     }
 
@@ -86,9 +103,8 @@ export function buildApp({
   })
 
   app.post('/meeting-types', async (request, reply) => {
-    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    const queryError = rejectUnknownQuery(request, reply)
     if (queryError) {
-      reply.code(400)
       return queryError
     }
 
@@ -103,9 +119,8 @@ export function buildApp({
   })
 
   app.get('/meetings', async (request, reply) => {
-    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    const queryError = rejectUnknownQuery(request, reply)
     if (queryError) {
-      reply.code(400)
       return queryError
     }
 
@@ -113,9 +128,8 @@ export function buildApp({
   })
 
   app.post('/meetings', async (request, reply) => {
-    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    const queryError = rejectUnknownQuery(request, reply)
     if (queryError) {
-      reply.code(400)
       return queryError
     }
 
