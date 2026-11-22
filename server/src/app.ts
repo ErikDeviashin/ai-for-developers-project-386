@@ -6,10 +6,22 @@ import { parseCreateMeetingTypeBody, rejectQueryParameters } from './validation.
 type BuildAppOptions = {
   db: DatabaseSync
   logger?: boolean
+  now?: () => Date
 }
 
-export function buildApp({ db, logger = false }: BuildAppOptions): FastifyInstance {
+declare module 'fastify' {
+  interface FastifyInstance {
+    now: () => Date
+  }
+}
+
+export function buildApp({
+  db,
+  logger = false,
+  now = () => new Date(),
+}: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger })
+  app.decorate('now', now)
 
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     if (error.code === 'FST_ERR_CTP_INVALID_JSON_BODY') {
