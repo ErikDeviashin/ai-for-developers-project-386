@@ -9,19 +9,9 @@ import {
 import { fieldErrorsFrom, toErrorResponse } from '../api/errors'
 import { PageContainer } from '../components/PageContainer'
 import { PageHeading } from '../components/PageHeading'
+import { formatDuration, sortMeetingTypes } from '../lib/meetingTypes'
 
 const DURATIONS = [15, 30, 60, 120]
-
-function sortMeetingTypes(meetingTypes: MeetingType[]): MeetingType[] {
-  return [...meetingTypes].sort(
-    (left, right) =>
-      left.durationMinutes - right.durationMinutes || left.name.localeCompare(right.name, 'ru'),
-  )
-}
-
-function formatDuration(durationMinutes: number): string {
-  return `${durationMinutes} минут`
-}
 
 export function OwnerPage() {
   const [meetingTypes, setMeetingTypes] = useState<MeetingType[] | null>(null)
