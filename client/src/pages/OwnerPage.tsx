@@ -65,11 +65,11 @@ export function OwnerPage() {
     setFormError(null)
     setSuccessMessage(null)
 
-    const body: CreateMeetingTypeRequest = {
+    const body = {
       name,
       ...(description.trim() === '' ? {} : { description }),
-      durationMinutes: duration === '' ? 0 : Number(duration),
-    }
+      ...(duration === '' ? {} : { durationMinutes: Number(duration) }),
+    } as CreateMeetingTypeRequest
 
     try {
       const { data } = await createMeetingType({ body, throwOnError: true })
