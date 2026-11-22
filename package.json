@@ -10,6 +10,7 @@
     "api:generate": "pnpm --filter contract generate && pnpm --filter client generate:sdk",
     "build": "pnpm api:generate && pnpm --filter client build && pnpm --filter server build",
     "start": "pnpm --filter server start",
+    "api:check": "pnpm api:generate && test -z \"$(git status --porcelain -- contract/generated client/src/api/generated)\"",
     "test": "pnpm test:server && pnpm test:e2e",
     "test:server": "pnpm --filter server test",
     "test:e2e": "pnpm --filter client test:e2e",
@@ -17,7 +18,7 @@
     "lint:fix": "oxlint --fix --deny-warnings .",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "check": "pnpm format:check && pnpm lint && pnpm test && pnpm build"
+    "check": "pnpm format:check && pnpm api:check && pnpm lint && pnpm test && pnpm build"
   },
   "devDependencies": {
     "oxfmt": "0.79.0",
