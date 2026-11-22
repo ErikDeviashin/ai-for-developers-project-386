@@ -9,6 +9,7 @@ export default defineConfig({
     proxy: {
       '/health': 'http://127.0.0.1:3000',
       '/meeting-types': 'http://127.0.0.1:3000',
+      '/meetings': 'http://127.0.0.1:3000',
     },
   },
 })

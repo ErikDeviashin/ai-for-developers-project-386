@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
+  createMeeting,
   getMeetingTypeAvailability,
   listMeetingTypes,
   type AvailabilityDay,
+  type Meeting,
   type MeetingType,
   type MeetingTypeAvailability,
 } from '../api/generated'
-import { toErrorResponse } from '../api/errors'
+import { fieldErrorsFrom, toErrorResponse } from '../api/errors'
 import { PageContainer } from '../components/PageContainer'
 import { PageHeading } from '../components/PageHeading'
 import {
@@ -24,6 +26,7 @@ type CalendarProps = {
   firstDate: string
   daysByDate: Map<string, AvailabilityDay>
   selectedDate: string | null
+  sessionMeetingDate: string | null
   onSelectDate: (date: string) => void
 }
 
@@ -31,6 +34,7 @@ function AvailabilityCalendar({
   firstDate,
   daysByDate,
   selectedDate,
+  sessionMeetingDate,
   onSelectDate,
 }: CalendarProps) {
   const weeks = buildCalendarWeeks(firstDate)
@@ -55,7 +59,9 @@ function AvailabilityCalendar({
             <tr key={week[0]?.date}>
               {week.map((day) => {
                 const availabilityDay = daysByDate.get(day.date)
-                const isEnabled = availabilityDay !== undefined && availabilityDay.slots.length > 0
+                const isYours = sessionMeetingDate === day.date
+                const isEnabled =
+                  isYours || (availabilityDay !== undefined && availabilityDay.slots.length > 0)
                 const isSelected = selectedDate === day.date
                 const className = [
                   'w-full rounded-lg border px-1 py-2 text-center transition-colors',
@@ -64,6 +70,7 @@ function AvailabilityCalendar({
                     : isEnabled
                       ? 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'
                       : 'cursor-not-allowed border-transparent bg-slate-50 text-slate-300',
+                  isYours ? 'ring-2 ring-green-500 ring-offset-1' : '',
                 ].join(' ')
 
                 return (
@@ -80,6 +87,9 @@ function AvailabilityCalendar({
                       {day.inTitleMonth ? null : (
                         <span className="block text-[11px] leading-tight">{day.monthLabel}</span>
                       )}
+                      {isYours ? (
+                        <span className="block text-[11px] leading-tight">Ваша встреча</span>
+                      ) : null}
                     </button>
                   </td>
                 )
@@ -106,6 +116,16 @@ export function BookPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [checkError, setCheckError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
+
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestAdditionalInfo, setGuestAdditionalInfo] = useState('')
+  const [guestFieldErrors, setGuestFieldErrors] = useState<Record<string, string>>({})
+  const [guestError, setGuestError] = useState<string | null>(null)
+  const [slotTaken, setSlotTaken] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [createdMeeting, setCreatedMeeting] = useState<Meeting | null>(null)
 
   useEffect(() => {
     let active = true
@@ -164,6 +184,7 @@ export function BookPage() {
 
     setNotice(null)
     setCheckError(null)
+    setSuccessMessage(null)
     setAvailability(null)
     setAvailabilityError(null)
 
@@ -188,17 +209,20 @@ export function BookPage() {
     setSelectedSlot(null)
     setNotice(null)
     setCheckError(null)
+    setSuccessMessage(null)
   }
 
   function handleSlotSelect(slotStart: string) {
     setSelectedSlot(slotStart)
     setNotice(null)
     setCheckError(null)
+    setSuccessMessage(null)
   }
 
   function handleBackToTypes() {
     setNotice(null)
     setCheckError(null)
+    setSuccessMessage(null)
     setStep('type')
   }
 
@@ -242,10 +266,84 @@ export function BookPage() {
     }
   }
 
+  async function handleSubmit() {
+    if (selectedType === null || selectedSlot === null || submitting) {
+      return
+    }
+
+    setSubmitting(true)
+    setGuestFieldErrors({})
+    setGuestError(null)
+    setSlotTaken(false)
+
+    try {
+      const { data } = await createMeeting({
+        body: {
+          meetingTypeId: selectedType.id,
+          start: selectedSlot,
+          guestName,
+          guestEmail,
+          ...(guestAdditionalInfo.trim() === ''
+            ? {}
+            : { guestAdditionalInfo: guestAdditionalInfo.trim() }),
+        },
+        throwOnError: true,
+      })
+
+      if (!data) {
+        setGuestError('Не удалось создать встречу. Попробуйте ещё раз.')
+        return
+      }
+
+      setCreatedMeeting(data)
+      setSelectedDate(data.start.slice(0, 10))
+      setSelectedSlot(null)
+      setNotice(null)
+      setCheckError(null)
+      setStep('datetime')
+      setSuccessMessage('Встреча создана')
+      setAvailability(null)
+      setAvailabilityError(null)
+      setReloadKey((current) => current + 1)
+    } catch (error: unknown) {
+      const response = toErrorResponse(error)
+      const fieldErrors = response?.details?.length ? fieldErrorsFrom(response) : {}
+      const hasFieldErrors = Object.keys(fieldErrors).length > 0
+
+      setGuestFieldErrors(fieldErrors)
+      setSlotTaken(response?.code === 'SLOT_TAKEN')
+      setGuestError(
+        response?.code === 'SLOT_TAKEN' || !hasFieldErrors
+          ? (response?.message ?? 'Не удалось создать встречу. Попробуйте ещё раз.')
+          : null,
+      )
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function chooseAnotherTime() {
+    setStep('datetime')
+    setSelectedSlot(null)
+    setGuestError(null)
+    setGuestFieldErrors({})
+    setSlotTaken(false)
+    setSuccessMessage(null)
+    setAvailability(null)
+    setAvailabilityError(null)
+    setReloadKey((current) => current + 1)
+  }
+
   const daysByDate = new Map((availability?.days ?? []).map((day) => [day.date, day]))
   const selectedDay = selectedDate === null ? undefined : daysByDate.get(selectedDate)
   const hasAnySlot = (availability?.days ?? []).some((day) => day.slots.length > 0)
   const availabilityLoading = availability === null && availabilityError === null
+  const sessionMeetingDate =
+    createdMeeting !== null &&
+    selectedType !== null &&
+    createdMeeting.meetingType.id === selectedType.id
+      ? createdMeeting.start.slice(0, 10)
+      : null
 
   return (
     <PageContainer>
@@ -301,6 +399,12 @@ export function BookPage() {
               Выбор даты и времени
             </h2>
 
+            {successMessage ? (
+              <output className="mt-4 block rounded-lg bg-green-50 p-3 text-green-800">
+                {successMessage}
+              </output>
+            ) : null}
+
             <div className="mt-4 rounded-lg bg-slate-50 p-4">
               <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
                 Календарь звонков
@@ -336,6 +440,7 @@ export function BookPage() {
                   firstDate={availability.days[0]?.date ?? ''}
                   daysByDate={daysByDate}
                   selectedDate={selectedDate}
+                  sessionMeetingDate={sessionMeetingDate}
                   onSelectDate={handleDateSelect}
                 />
 
@@ -346,6 +451,15 @@ export function BookPage() {
                       : `${formatLongDate(selectedDate)} · ${selectedType.name}`}
                   </h3>
                   <p className="mt-1 text-sm text-slate-600">Время по Тбилиси (UTC+4)</p>
+
+                  {createdMeeting !== null && sessionMeetingDate === selectedDate ? (
+                    <div className="mt-4 rounded-lg border border-green-300 bg-green-50 p-3 text-green-900">
+                      <p className="font-medium">Ваша встреча</p>
+                      <p className="mt-1">
+                        {formatSlotTime(createdMeeting.start)}–{formatSlotTime(createdMeeting.end)}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {notice ? (
                     <p role="alert" className="mt-4 rounded-lg bg-amber-50 p-3 text-amber-900">
@@ -433,16 +547,130 @@ export function BookPage() {
             <h2 id="guest-step-heading" className="text-2xl font-semibold">
               Данные гостя
             </h2>
-            <p className="mt-2 text-slate-600">
-              Скоро здесь можно будет указать имя, email и дополнительную информацию.
-            </p>
-            <button
-              type="button"
-              onClick={() => setStep('datetime')}
-              className="mt-6 rounded-lg border border-slate-300 px-5 py-3 font-medium text-slate-900 transition-colors hover:bg-slate-50"
+
+            {selectedType !== null && selectedDate !== null && selectedSlot !== null ? (
+              <div className="mt-4 rounded-lg bg-slate-50 p-4">
+                <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
+                  Календарь звонков
+                </p>
+                <p className="mt-1 text-lg font-medium">
+                  {selectedType.name} · {formatDuration(selectedType.durationMinutes)}
+                </p>
+                <p className="mt-1 text-slate-700">
+                  {formatLongDate(selectedDate)}, {formatSlotTime(selectedSlot)}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">Время по Тбилиси (UTC+4)</p>
+              </div>
+            ) : null}
+
+            <form
+              noValidate
+              aria-labelledby="guest-step-heading"
+              onSubmit={(event: FormEvent<HTMLFormElement>) => {
+                event.preventDefault()
+                void handleSubmit()
+              }}
+              className="mt-6 space-y-4"
             >
-              Назад
-            </button>
+              <div>
+                <label htmlFor="guest-name" className="block font-medium">
+                  Имя
+                </label>
+                <input
+                  id="guest-name"
+                  type="text"
+                  value={guestName}
+                  onChange={(event) => setGuestName(event.target.value)}
+                  aria-invalid={guestFieldErrors.guestName ? true : undefined}
+                  aria-describedby={guestFieldErrors.guestName ? 'guest-name-error' : undefined}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+                {guestFieldErrors.guestName ? (
+                  <p id="guest-name-error" className="mt-1 text-sm text-red-700">
+                    {guestFieldErrors.guestName}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <label htmlFor="guest-email" className="block font-medium">
+                  Email
+                </label>
+                <input
+                  id="guest-email"
+                  type="email"
+                  value={guestEmail}
+                  onChange={(event) => setGuestEmail(event.target.value)}
+                  aria-invalid={guestFieldErrors.guestEmail ? true : undefined}
+                  aria-describedby={guestFieldErrors.guestEmail ? 'guest-email-error' : undefined}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+                {guestFieldErrors.guestEmail ? (
+                  <p id="guest-email-error" className="mt-1 text-sm text-red-700">
+                    {guestFieldErrors.guestEmail}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <label htmlFor="guest-additional-info" className="block font-medium">
+                  Дополнительная информация
+                </label>
+                <textarea
+                  id="guest-additional-info"
+                  value={guestAdditionalInfo}
+                  onChange={(event) => setGuestAdditionalInfo(event.target.value)}
+                  aria-invalid={guestFieldErrors.guestAdditionalInfo ? true : undefined}
+                  aria-describedby={
+                    guestFieldErrors.guestAdditionalInfo
+                      ? 'guest-additional-info-error'
+                      : 'guest-additional-info-hint'
+                  }
+                  rows={3}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+                <p id="guest-additional-info-hint" className="mt-1 text-sm text-slate-600">
+                  Необязательно
+                </p>
+                {guestFieldErrors.guestAdditionalInfo ? (
+                  <p id="guest-additional-info-error" className="mt-1 text-sm text-red-700">
+                    {guestFieldErrors.guestAdditionalInfo}
+                  </p>
+                ) : null}
+              </div>
+
+              {guestError ? (
+                <div role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">
+                  <p>{guestError}</p>
+                  {slotTaken ? (
+                    <button
+                      type="button"
+                      onClick={chooseAnotherTime}
+                      className="mt-2 font-medium underline underline-offset-4"
+                    >
+                      Выбрать другое время
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep('datetime')}
+                  className="rounded-lg border border-slate-300 px-5 py-3 font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                >
+                  Назад
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-lg bg-slate-900 px-5 py-3 font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? 'Отправляем…' : 'Подтвердить'}
+                </button>
+              </div>
+            </form>
           </section>
         )}
       </div>

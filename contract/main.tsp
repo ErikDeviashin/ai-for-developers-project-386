@@ -35,6 +35,12 @@ model NotFoundResponse {
   @body body: ErrorResponse;
 }
 
+@error
+model ConflictResponse {
+  @statusCode _: 409;
+  @body body: ErrorResponse;
+}
+
 model MeetingType {
   id: int32;
   name: string;
@@ -67,6 +73,35 @@ model MeetingTypeAvailability {
   days: AvailabilityDay[];
 }
 
+model MeetingTypeSummary {
+  id: int32;
+  name: string;
+  durationMinutes: int32;
+}
+
+model Meeting {
+  id: int32;
+  meetingType: MeetingTypeSummary;
+  start: offsetDateTime;
+  end: offsetDateTime;
+  guestName: string;
+  guestEmail: string;
+  guestAdditionalInfo?: string;
+}
+
+model CreateMeetingRequest {
+  meetingTypeId: int32;
+  start: offsetDateTime;
+  guestName: string;
+  guestEmail: string;
+  guestAdditionalInfo?: string;
+}
+
+model MeetingCreated {
+  @statusCode _: 201;
+  @body body: Meeting;
+}
+
 @route("/health")
 @get
 @operationId("getHealth")
@@ -90,3 +125,10 @@ op createMeetingType(
 op getMeetingTypeAvailability(
   @path meetingTypeId: int32,
 ): MeetingTypeAvailability | BadRequestResponse | NotFoundResponse;
+
+@route("/meetings")
+@post
+@operationId("createMeeting")
+op createMeeting(
+  @body body: CreateMeetingRequest,
+): MeetingCreated | BadRequestResponse | NotFoundResponse | ConflictResponse;

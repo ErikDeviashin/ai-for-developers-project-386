@@ -33,7 +33,12 @@ type OccupiedInterval = {
   end_ms: number
 }
 
-function tbilisiDate(instant: Date): CalendarDate {
+export type BookingWindow = {
+  firstMidnightMs: number
+  endMidnightMs: number
+}
+
+export function tbilisiDate(instant: Date): CalendarDate {
   const local = new Date(instant.getTime() + TBILISI_OFFSET_MINUTES * MINUTES_IN_MS)
 
   return {
@@ -43,7 +48,7 @@ function tbilisiDate(instant: Date): CalendarDate {
   }
 }
 
-function addDays(date: CalendarDate, days: number): CalendarDate {
+export function addDays(date: CalendarDate, days: number): CalendarDate {
   const shifted = new Date(Date.UTC(date.year, date.month - 1, date.day + days))
 
   return {
@@ -53,30 +58,46 @@ function addDays(date: CalendarDate, days: number): CalendarDate {
   }
 }
 
-function tbilisiMidnightMs(date: CalendarDate): number {
+export function tbilisiMidnightMs(date: CalendarDate): number {
   return Date.UTC(date.year, date.month - 1, date.day) - TBILISI_OFFSET_MINUTES * MINUTES_IN_MS
 }
 
-function isWeekend(date: CalendarDate): boolean {
+export function isWeekend(date: CalendarDate): boolean {
   const dayOfWeek = new Date(Date.UTC(date.year, date.month - 1, date.day)).getUTCDay()
 
   return dayOfWeek === 0 || dayOfWeek === 6
 }
 
-function pad(value: number): string {
+export function pad(value: number): string {
   return String(value).padStart(2, '0')
 }
 
-function formatDate(date: CalendarDate): string {
+export function formatDate(date: CalendarDate): string {
   return `${date.year}-${pad(date.month)}-${pad(date.day)}`
 }
 
-function formatTime(minutes: number): string {
+export function formatTime(minutes: number): string {
   return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`
 }
 
-function formatSlot(date: CalendarDate, minutes: number): string {
+export function formatInstant(ms: number): string {
+  const date = tbilisiDate(new Date(ms))
+  const minutes = Math.floor((ms - tbilisiMidnightMs(date)) / MINUTES_IN_MS)
+
   return `${formatDate(date)}T${formatTime(minutes)}:00+04:00`
+}
+
+export function getBookingWindow(now: Date): BookingWindow {
+  const firstDate = addDays(tbilisiDate(now), 1)
+
+  return {
+    firstMidnightMs: tbilisiMidnightMs(firstDate),
+    endMidnightMs: tbilisiMidnightMs(addDays(firstDate, WINDOW_DAYS)),
+  }
+}
+
+function formatSlot(date: CalendarDate, minutes: number): string {
+  return formatInstant(tbilisiMidnightMs(date) + minutes * MINUTES_IN_MS)
 }
 
 function lastStartMinutes(durationMinutes: number): number {
@@ -94,12 +115,10 @@ export function getMeetingTypeAvailability(
   now: Date,
 ): MeetingTypeAvailability {
   const firstDate = addDays(tbilisiDate(now), 1)
+  const window = getBookingWindow(now)
   const occupied = db
     .prepare('SELECT start_ms, end_ms FROM meetings WHERE start_ms < ? AND end_ms > ?')
-    .all(
-      tbilisiMidnightMs(addDays(firstDate, WINDOW_DAYS)),
-      tbilisiMidnightMs(firstDate),
-    ) as unknown as OccupiedInterval[]
+    .all(window.endMidnightMs, window.firstMidnightMs) as unknown as OccupiedInterval[]
 
   const days: AvailabilityDay[] = []
 

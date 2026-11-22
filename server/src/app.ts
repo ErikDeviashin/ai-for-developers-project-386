@@ -2,10 +2,13 @@ import Fastify, { type FastifyError, type FastifyInstance } from 'fastify'
 import type { DatabaseSync } from 'node:sqlite'
 import { getMeetingTypeAvailability } from './availability.js'
 import { createMeetingType, findMeetingType, listMeetingTypes } from './meeting-types.js'
+import { createMeeting } from './meetings.js'
 import {
+  parseCreateMeetingBody,
   parseCreateMeetingTypeBody,
   parseMeetingTypeId,
   rejectQueryParameters,
+  validateBookingStart,
 } from './validation.js'
 
 type BuildAppOptions = {
@@ -97,6 +100,60 @@ export function buildApp({
 
     reply.code(201)
     return createMeetingType(db, parsed.value)
+  })
+
+  app.post('/meetings', async (request, reply) => {
+    const queryError = rejectQueryParameters(request.query as Record<string, unknown>)
+    if (queryError) {
+      reply.code(400)
+      return queryError
+    }
+
+    const parsed = parseCreateMeetingBody(request.body)
+    if (!parsed.ok) {
+      reply.code(400)
+      return parsed.error
+    }
+
+    const meetingType = findMeetingType(db, parsed.value.meetingTypeId)
+    if (meetingType === undefined) {
+      reply.code(404)
+      return {
+        code: 'MEETING_TYPE_NOT_FOUND',
+        message: 'Тип встречи не найден',
+      }
+    }
+
+    const startError = validateBookingStart(
+      parsed.value.startMs,
+      meetingType.durationMinutes,
+      app.now(),
+    )
+    if (startError) {
+      reply.code(400)
+      return startError
+    }
+
+    const result = createMeeting(db, meetingType, {
+      startMs: parsed.value.startMs,
+      endMs: parsed.value.startMs + meetingType.durationMinutes * 60_000,
+      guestName: parsed.value.guestName,
+      guestEmail: parsed.value.guestEmail,
+      ...(parsed.value.guestAdditionalInfo === undefined
+        ? {}
+        : { guestAdditionalInfo: parsed.value.guestAdditionalInfo }),
+    })
+
+    if (!result.ok) {
+      reply.code(409)
+      return {
+        code: 'SLOT_TAKEN',
+        message: 'Это время уже занято, выберите другое',
+      }
+    }
+
+    reply.code(201)
+    return result.meeting
   })
 
   return app
