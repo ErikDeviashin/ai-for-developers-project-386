@@ -20,7 +20,7 @@ export type CreateMeetingRequest = {
 export type CreateMeetingTypeRequest = {
     name: string;
     description?: string;
-    durationMinutes: number;
+    durationMinutes: MeetingDuration;
 };
 
 export type ErrorResponse = {
@@ -48,6 +48,8 @@ export type Meeting = {
     guestEmail: string;
     guestAdditionalInfo?: string;
 };
+
+export type MeetingDuration = 15 | 30 | 60 | 120;
 
 export type MeetingType = {
     id: number;

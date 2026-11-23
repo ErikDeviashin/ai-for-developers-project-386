@@ -366,6 +366,11 @@ export function BookPage() {
       setSlotTaken(isSlotTaken)
       setTypeNotFound(isTypeNotFound)
       setGuestError(showGeneralMessage ? (response?.message ?? CREATE_MEETING_FALLBACK) : null)
+
+      if (startMessage !== undefined) {
+        setSelectedSlot(null)
+        setStep('datetime')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -631,12 +636,6 @@ export function BookPage() {
                 </p>
                 <p className="mt-2 text-sm text-slate-600">Время по Тбилиси (UTC+4)</p>
               </div>
-            ) : null}
-
-            {startError ? (
-              <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-red-800">
-                {startError}
-              </p>
             ) : null}
 
             <form

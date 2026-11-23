@@ -54,10 +54,22 @@ model MeetingType {
   durationMinutes: int32;
 }
 
+union MeetingDuration {
+  fifteen: 15,
+  thirty: 30,
+  sixty: 60,
+  oneHundredTwenty: 120,
+}
+
 model CreateMeetingTypeRequest {
+  @minLength(1)
+  @maxLength(80)
   name: string;
+
+  @maxLength(500)
   description?: string;
-  durationMinutes: int32;
+
+  durationMinutes: MeetingDuration;
 }
 
 model MeetingTypeCreated {
@@ -96,10 +108,20 @@ model Meeting {
 }
 
 model CreateMeetingRequest {
+  @minValue(1)
   meetingTypeId: int32;
+
   start: offsetDateTime;
+
+  @minLength(1)
+  @maxLength(100)
   guestName: string;
+
+  @minLength(3)
+  @maxLength(254)
   guestEmail: string;
+
+  @maxLength(500)
   guestAdditionalInfo?: string;
 }
 
@@ -129,7 +151,7 @@ op createMeetingType(
 @get
 @operationId("getMeetingTypeAvailability")
 op getMeetingTypeAvailability(
-  @path meetingTypeId: int32,
+  @path @minValue(1) meetingTypeId: int32,
 ):
   | MeetingTypeAvailability
   | BadRequestResponse

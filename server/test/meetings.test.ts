@@ -542,6 +542,34 @@ describe('POST /meetings conflicts', () => {
     })
   })
 
+  it('rejects a partial overlap with a different meeting type', async () => {
+    const sixtyMinutes = await createMeetingType(60)
+    const thirtyMinutes = await createMeetingType(30)
+
+    const first = await postMeeting({
+      meetingTypeId: sixtyMinutes.id,
+      start: '2026-11-23T10:00:00+04:00',
+      guestName: 'Анна',
+      guestEmail: 'anna@example.com',
+    })
+
+    expect(first.statusCode).toBe(201)
+
+    const second = await postMeeting({
+      meetingTypeId: thirtyMinutes.id,
+      start: '2026-11-23T10:30:00+04:00',
+      guestName: 'Борис',
+      guestEmail: 'boris@example.com',
+    })
+
+    expect(second.statusCode).toBe(409)
+    expect(second.json()).toEqual({
+      code: 'SLOT_TAKEN',
+      message: expect.any(String),
+    })
+    expect(second.json()).not.toHaveProperty('details')
+  })
+
   it('allows back-to-back meetings', async () => {
     const meetingType = await createMeetingType(30)
 
