@@ -84,6 +84,7 @@ paths:
           schema:
             type: integer
             format: int32
+            minimum: 1
       responses:
         '200':
           description: The request has succeeded.
@@ -200,15 +201,21 @@ components:
         meetingTypeId:
           type: integer
           format: int32
+          minimum: 1
         start:
           type: string
           format: date-time
         guestName:
           type: string
+          minLength: 1
+          maxLength: 100
         guestEmail:
           type: string
+          minLength: 3
+          maxLength: 254
         guestAdditionalInfo:
           type: string
+          maxLength: 500
     CreateMeetingTypeRequest:
       type: object
       required:
@@ -217,11 +224,13 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 80
         description:
           type: string
+          maxLength: 500
         durationMinutes:
-          type: integer
-          format: int32
+          $ref: '#/components/schemas/MeetingDuration'
     ErrorResponse:
       type: object
       required:
@@ -285,6 +294,13 @@ components:
           type: string
         guestAdditionalInfo:
           type: string
+    MeetingDuration:
+      type: number
+      enum:
+        - 15
+        - 30
+        - 60
+        - 120
     MeetingType:
       type: object
       required:
