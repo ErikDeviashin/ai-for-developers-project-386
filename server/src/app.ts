@@ -1,9 +1,11 @@
+import fastifyStatic from '@fastify/static'
 import Fastify, {
   type FastifyError,
   type FastifyInstance,
   type FastifyReply,
   type FastifyRequest,
 } from 'fastify'
+import { extname, isAbsolute } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 import { getMeetingTypeAvailability } from './availability.js'
 import { createMeetingType, findMeetingType, listMeetingTypes } from './meeting-types.js'
@@ -21,6 +23,28 @@ type BuildAppOptions = {
   db: DatabaseSync
   logger?: boolean
   now?: () => Date
+  clientDir?: string
+}
+
+const API_PREFIXES = ['/health', '/meeting-types', '/meetings'] as const
+
+function isApiPath(pathname: string): boolean {
+  return API_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+}
+
+function isSpaHtmlRequest(request: FastifyRequest): boolean {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return false
+  }
+
+  const accept = request.headers.accept
+  if (accept === undefined || !accept.toLowerCase().includes('text/html')) {
+    return false
+  }
+
+  const { pathname } = new URL(request.url, 'http://localhost')
+
+  return !isApiPath(pathname) && extname(pathname) === ''
 }
 
 function rejectUnknownQuery(
@@ -46,7 +70,12 @@ export function buildApp({
   db,
   logger = false,
   now = () => new Date(),
+  clientDir,
 }: BuildAppOptions): FastifyInstance {
+  if (clientDir !== undefined && !isAbsolute(clientDir)) {
+    throw new Error('clientDir must be an absolute path')
+  }
+
   const app = Fastify({ logger })
   app.decorate('now', now)
 
@@ -179,6 +208,24 @@ export function buildApp({
     reply.code(201)
     return result.meeting
   })
+
+  if (clientDir !== undefined) {
+    app.register(fastifyStatic, {
+      root: clientDir,
+      index: ['index.html'],
+    })
+
+    app.setNotFoundHandler((request, reply) => {
+      if (isSpaHtmlRequest(request)) {
+        return reply.sendFile('index.html')
+      }
+
+      return reply.code(404).send({
+        code: 'NOT_FOUND',
+        message: 'Маршрут не найден',
+      })
+    })
+  }
 
   return app
 }
