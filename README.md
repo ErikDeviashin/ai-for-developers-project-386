@@ -58,6 +58,35 @@ pnpm dev
 
 `pnpm check` выполняет единую проверку: формат, дрейф контракта, линт, серверные и браузерные тесты, сборку.
 
+## Запуск в Docker
+
+```bash
+docker build -t calendar:local .
+docker run --rm -p 3000:3000 calendar:local
+```
+
+Образ собирает клиент и сервер и запускает один процесс на `0.0.0.0:$PORT` (по умолчанию `3000`). Fastify отдаёт API и собранный React на одном origin. Произвольный порт задаётся через `PORT`:
+
+```bash
+docker run --rm -p 8080:8080 -e PORT=8080 calendar:local
+```
+
+Smoke-проверки:
+
+```bash
+curl -fsS http://127.0.0.1:3000/health
+for path in / /book /owner; do
+  curl -fsS -H 'Accept: text/html' "http://127.0.0.1:3000$path" > /dev/null
+done
+```
+
+SQLite хранится в `/data/calendar.sqlite`. Без volume данные теряются при пересоздании контейнера. Для сохранения между запусками:
+
+```bash
+docker volume create calendar-data
+docker run --rm -p 3000:3000 -v calendar-data:/data calendar:local
+```
+
 ## Демонстрация
 
 Ссылка на asciinema будет добавлена позже.
